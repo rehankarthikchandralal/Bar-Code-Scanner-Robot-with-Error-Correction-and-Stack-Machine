@@ -35,16 +35,7 @@ This project involved building a LEGO Mindstorms EV3 robot capable of:
 4. **Scrolling:**
    - Motors are controlled to move the robot to the next barcode position.
 
-**Challenges and Solutions**
 
-* **Precise Positioning:**
-  - Calibrated motor control and sensor feedback were used to ensure accurate positioning.
-* **Barcode Detection:**
-  - Image processing techniques were employed to reliably identify and extract barcode data.
-* **Hamming Code Implementation:**
-  - Efficient algorithms were developed to perform error correction and decoding.
-* **Stack Machine Design:**
-  - A robust stack machine architecture was implemented to handle various instruction types and data formats.
 
 
 
