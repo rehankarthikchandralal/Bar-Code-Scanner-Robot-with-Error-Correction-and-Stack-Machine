@@ -5,7 +5,6 @@ from typing import List, Tuple, Union
 
 
 # IMPORTANT NOTE: DO NOT IMPORT THE ev3dev.ev3 MODULE IN THIS FILE
-
 class HCResult(Enum):
     """
     Return codes for the Hamming Code interface
@@ -24,12 +23,17 @@ class HammingCode:
         """
         Initializes the class HammingCode with all values necessary.
         """
-        self.total_bits = 0  # n
-        self.data_bits = 0  # k
-        self.parity_bits = 0  # r
+        self.total_bits = 10  # n
+        self.data_bits = 6  # k
+        self.parity_bits = 4  # r
 
         # Predefined non-systematic generator matrix G'
-        gns = []
+        gns = [[1, 1, 1, 0, 0, 0, 0, 1, 0, 0],
+               [0, 1, 0, 0, 1, 0, 0, 1, 0, 0],
+               [1, 0, 0, 1, 0, 1, 0, 0, 0, 0],
+               [0, 0, 0, 1, 0, 0, 1, 1, 0, 0],
+               [1, 1, 0, 1, 0, 0, 0, 1, 1, 0],
+               [1, 0, 0, 1, 0, 0, 0, 1, 0, 1]]
 
         # Convert non-systematic G' into systematic matrices G, H
         self.g = self.__convert_to_g(gns)
@@ -46,41 +50,35 @@ class HammingCode:
         """
 
         # REPLACE "pass" WITH YOUR IMPLEMENTATION
-        gns = [[1, 1, 1, 0, 0, 0, 0, 1, 0, 0], [0, 1, 0, 0, 1, 0, 0, 1, 0, 0], [1, 0, 0, 1, 0, 1, 0, 0, 0, 0],
-               [0, 0, 0, 1, 0, 0, 1, 1, 0, 0], [1, 1, 0, 1, 0, 0, 0, 1, 1, 0],
-               [1, 0, 0, 1, 0, 0, 0, 1, 0, 1]]  # input non-systematic generator matrix
-        r1 = [1, 1, 1, 0, 0, 0, 0, 1, 0, 0]
-        r2 = [0, 1, 0, 0, 1, 0, 0, 1, 0, 0]
-        r3 = [1, 0, 0, 1, 0, 1, 0, 0, 0, 0]
-        r4 = [0, 0, 0, 1, 0, 0, 1, 1, 0, 0]
-        r5 = [1, 1, 0, 1, 0, 0, 0, 1, 1, 0]
-        r6 = [1, 0, 0, 1, 0, 0, 0, 1, 0, 1]
-        for i in range(10):  # start of performing row operations for conversion
-            r3[i] = r3[i] ^ r1[i]
-            r5[i] = r5[i] ^ r1[i]
-            r6[i] = r6[i] ^ r1[i]
         for i in range(10):
-            r3[i] = r3[i] ^ r2[i]
-            r1[i] = r1[i] ^ r2[i]
-            r6[i] = r6[i] ^ r2[i]
+            gns[2][i] = gns[2][i] ^ gns[0][i]
+            gns[4][i] = gns[4][i] ^ gns[0][i]
+            gns[5][i] = gns[5][i] ^ gns[0][i]  # Subtracting row 1 from: row 3, row 5, row 6
         for i in range(10):
-            r1[i] = r1[i] ^ r3[i]
-            r5[i] = r5[i] ^ r3[i]
-            r6[i] = r6[i] ^ r3[i]
+            gns[0][i] = gns[0][i] ^ gns[1][i]
+            gns[2][i] = gns[2][i] ^ gns[1][i]
+            gns[5][i] = gns[5][i] ^ gns[1][i]  # Subtracting row 2 from: row 1, row 3, row 6
         for i in range(10):
-            r1[i] = r1[i] ^ r4[i]
-            r3[i] = r3[i] ^ r4[i]
+            gns[0][i] = gns[0][i] ^ gns[2][i]
+            gns[4][i] = gns[4][i] ^ gns[2][i]
+            gns[5][i] = gns[5][i] ^ gns[2][i]  # Subtracting row 3 from: row 1, row 5, row 6
         for i in range(10):
-            r2[i] = r2[i] ^ r5[i]
-            r3[i] = r3[i] ^ r5[i]
+            gns[0][i] = gns[0][i] ^ gns[3][i]
+            gns[2][i] = gns[2][i] ^ gns[3][i]  # Subtracting row 4 from: row 1, row 3
         for i in range(10):
-            r1[i] = r1[i] ^ r6[i]
-            r2[i] = r2[i] ^ r6[i]
-            r5[i] = r5[i] ^ r6[i]
-        list = [[r1], [r2], [r3], [r4], [r5], [r6]]
-        print("Systematic Generator Matrix G is", list)  # printing  Systematic  generator matrix G
+            gns[1][i] = gns[1][i] ^ gns[4][i]
+            gns[2][i] = gns[2][i] ^ gns[4][i]  # Subtracting row 5 from: row 2, row 3
+        for i in range(10):
+            gns[0][i] = gns[0][i] ^ gns[5][i]
+            gns[1][i] = gns[1][i] ^ gns[5][i]
+            gns[4][i] = gns[4][i] ^ gns[5][i]  # Subtracting row 6 from: row 1, row 2, row 5
+
+        list = []
+        list = gns
+        return list
 
     def __derive_h(self, g: List):
+
         """
         This method executes all steps necessary to derive H from G.
 
@@ -89,27 +87,30 @@ class HammingCode:
         Returns:
             list:
         """
+        g_matrix = [[1, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+                    [0, 1, 0, 0, 0, 0, 0, 0, 1, 1],
+                    [0, 0, 1, 0, 0, 0, 1, 1, 1, 0],
+                    [0, 0, 0, 1, 0, 0, 1, 1, 0, 0],
+                    [0, 0, 0, 0, 1, 0, 0, 1, 1, 1],
+                    [0, 0, 0, 0, 0, 1, 0, 1, 0, 1]]
+        parity_matrix = [g_matrix[0][6:],
+                         g_matrix[1][6:],
+                         g_matrix[2][6:],
+                         g_matrix[3][6:],
+                         g_matrix[4][6:],
+                         g_matrix[5][6:]]
 
-        # REPLACE "pass" WITH YOUR IMPLEMENTATION
-        g = [[1, 0, 0, 0, 0, 0, 1, 0, 0, 1], [0, 1, 0, 0, 0, 0, 0, 0, 1, 1], [0, 0, 1, 0, 0, 0, 1, 1, 1, 0],
-             [0, 0, 0, 1, 0, 0, 1, 1, 0, 0], [0, 0, 0, 0, 1, 0, 0, 1, 1, 1],
-             [0, 0, 0, 0, 0, 1, 0, 1, 0, 1]]  # systematic generator matrix
-        parity = [[1, 0, 0, 1, ],
-                  [0, 0, 1, 1],
-                  [1, 1, 1, 0],
-                  [1, 1, 0, 0],
-                  [0, 1, 1, 1],
-                  [0, 1, 0, 1]]
-        transposed = [[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]
+        transpose_matrix = [[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]
         for i in range(6):
             for j in range(4):
-                transposed[j][i] = parity[i][j]  # transposing parity section
+                transpose_matrix[j][i] = parity_matrix[i][j]
         list = [[0, 0, 0, 0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]]
+
         for i in range(4):
             for j in range(6):
-                list[i][j] = transposed[i][j]  # combining with identity matrix
-        print('Systematic Parity check Matrix H is', list)  # printing Systematic parity check matrix H
+                list[i][j] = transpose_matrix[i][j]
+
         return list
 
     def encode(self, source_word: Tuple[int, ...]) -> Tuple[int, ...]:
@@ -121,28 +122,25 @@ class HammingCode:
         Returns:
             tuple: n-tuple (length depends on number of total bits)
         """
-
-        # REPLACE "pass" WITH YOUR IMPLEMENTATION
         global tuple
-        result = []
-        G=()
-        G1 = ((1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1), (0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1), (0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0),
-              (0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1), (0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0),
-              (0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1))
-        G=tuple(G1)
+        test = []
+        G_Matrix = (
+        (1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1), (0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1), (0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0),
+        (0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1), (0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0),
+        (0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1))
         for i in range(11):
             total = 0
             x = 0
             for j in range(6):
-                total = source_word[j] * G[j][i]
+                total = source_word[j] * G_Matrix[j][i]
                 if (j == 0):
                     x = total
                 else:
                     x = x ^ total
-            result.append(x)
-        tuple1 = tuple(result)
-        print("Encoded word is", tuple1)
-        return tuple1
+            test.append(x)
+        test_2 = tuple(test)
+        print("Encoded word is", test_2)
+        return test_2
 
     def decode(self, encoded_word: Tuple[int, ...]) -> Tuple[Union[None, Tuple[int, ...]], HCResult]:
         """
@@ -152,77 +150,76 @@ class HammingCode:
         Returns:
             Union: (m-tuple, HCResult) or (None, HCResult)(length depends on number of data bits)
         """
-
-        # REPLACE "pass" WITH YOUR IMPLEMENTATION
-        overallparity = 0
+        parity_1 = 0
         for i in range(11):
-            overallparity = overallparity ^ encoded_word[i]
-        print("overall parity is", overallparity)
-        result1 = []
-        messageword = []
+            parity_1 = parity_1 ^ encoded_word[i]
+        print("overall parity is", parity_1)
+        res_1 = []
+        msw = []
         for i in range(10):
-            result1.append(encoded_word[i])
+            res_1.append(encoded_word[i])
             if (i < 6):
-                messageword.append(encoded_word[i])
-        print(result1)
-        print(messageword)
-        syndrome = []
-        Htranspose = [[1, 0, 0, 1], [0, 0, 1, 1], [1, 1, 1, 0], [1, 1, 0, 0], [0, 1, 1, 1], [0, 1, 0, 1], [1, 0, 0, 0],
-                      [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
+                msw.append(encoded_word[i])
+        print(res_1)
+        print(msw)
+        synd = []
+        H_Matrix = [[1, 0, 0, 1],
+                    [0, 0, 1, 1],
+                    [1, 1, 1, 0],
+                    [1, 1, 0, 0],
+                    [0, 1, 1, 1],
+                    [0, 1, 0, 1],
+                    [1, 0, 0, 0],
+                    [0, 1, 0, 0],
+                    [0, 0, 1, 0],
+                    [0, 0, 0, 1]]
         for i in range(4):
             total = 0
             x = 0
             for j in range(10):
-                total = result1[j] * Htranspose[j][i]
+                total = res_1[j] * H_Matrix[j][i]
                 if (j == 0):
                     x = total
                 else:
                     x = x ^ total
-            print(x)
-            syndrome.append(x)
-        print("Syndrome vector is", syndrome)
-        syndrometotal = 0
+            synd.append(x)
+        print("The syndrome is ",synd)
+
+        synd_total = 0
         for i in range(4):
-            syndrometotal = syndrometotal + syndrome[i]
-        print("Syndrometotal", syndrometotal)
-        if (overallparity == 0):
-            if (syndrometotal == 0):
+            synd_total = synd_total + synd[i]
+        if (parity_1 == 0):
+            if (synd_total == 0):
                 print("Zero errors")
-                print("Decoded word is ", messageword)
-                Union = tuple(messageword)
+                print("Decoded word is ", msw)
+                Union = (*msw,)
                 print(Union)
-                return Union,HCResult.VALID
-        if (overallparity == 1):
-            if (syndrometotal == 0):
+                return Union, HCResult.VALID
+        if (parity_1 == 1):
+            if (synd_total == 0):
                 print("Error is in the parity bit")
-                print("Decoded word is", messageword)
-                Union = tuple(messageword)
+                print("Decoded word is", msw)
+                Union = (*msw,)
                 print(Union)
-                return Union,HCResult.CORRECTED
-        if (overallparity == 1):
-            if (syndrometotal != 0):
+                return Union, HCResult.CORRECTED
+        if (parity_1 == 1):
+            if (synd_total != 0):
                 print("Single error")
                 for i in range(10):
-                    if (syndrome == Htranspose[i]):
+                    if (synd == H_Matrix[i]):
                         print("Error is in position =", i)
                         if (i < 6):
-                            if (messageword[i] == 0):
-                                messageword[i] = 1
+                            if (msw[i] == 0):
+                                msw[i] = 1
                             else:
-                                messageword[i] = 0
-                print("Corrected decoded word is", messageword)
-                Union = tuple(messageword)
+                                msw[i] = 0
+                print("Corrected decoded word is", msw)
+                Union = (*msw,)
                 print(Union)
-                return Union,HCResult.CORRECTED
-        if (overallparity == 0):
-            if (syndrometotal != 0):
+                return Union, HCResult.CORRECTED
+        if (parity_1 == 0):
+            if (synd_total != 0):
                 print("Multiple errors")
-                print("Decoded word is ", messageword)
-                Union = tuple(messageword)
-                print("Uncorrectable errors in ", Union)
-                return Union,HCResult.UNCORRECTABLE
-
-
-
-
-
+                print("Decoded word is ", msw)
+                Union = (*msw,)
+                return Union, HCResult.UNCORRECTABLE
